@@ -302,13 +302,21 @@ async function getExistingConversationIds() {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([DOCS_STORE], 'readonly');
     const store = transaction.objectStore(DOCS_STORE);
-    const convoIdIndex = store.index('convoId');
-    const request = convoIdIndex.getAllKeys();
+    const request = store.getAll();
     
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      // Extract unique conversation IDs from the keys
-      const uniqueConvoIds = [...new Set(request.result)];
+      // Extract unique conversation IDs from all documents
+      const convoIds = new Set();
+      request.result.forEach(doc => {
+        if (doc.convoId) {
+          convoIds.add(doc.convoId);
+        }
+      });
+      
+      const uniqueConvoIds = Array.from(convoIds);
+      console.log(`Found ${uniqueConvoIds.length} existing conversation IDs in database`);
+      console.log('Sample existing conversation IDs:', uniqueConvoIds.slice(0, 5));
       resolve(uniqueConvoIds);
     };
   });

@@ -2182,7 +2182,7 @@ async function crawlConversationsInContent(lastSync) {
 
   // Check if we should skip crawling based on last sync time
   const currentTime = Date.now();
-  const oneHourInMs = 60 * 5 * 1000; // 5 minutes in milliseconds
+  const oneHourInMs = 60 * 10 * 1000; // 10 minutes in milliseconds
   
   if (lastSync && (currentTime - lastSync) < oneHourInMs) {
     const timeSinceLastSync = Math.round((currentTime - lastSync) / (60 * 1000)); // minutes
@@ -2210,11 +2210,39 @@ async function crawlConversationsInContent(lastSync) {
     const existingConvosResponse = await sendMessageToBackground('getExistingConversationIds');
     const existingConvoIds = existingConvosResponse.success ? new Set(existingConvosResponse.data || []) : new Set();
     
+    // Debug: Log some existing conversation IDs and fetched conversation IDs
+    console.log('Response from getExistingConversationIds:', existingConvosResponse);
+    console.log('Sample existing conversation IDs from DB:', Array.from(existingConvoIds).slice(0, 5));
+    console.log('Sample fetched conversation IDs:', conversations.slice(0, 5).map(c => c.id));
+    console.log('Existing conversations in DB:', existingConvoIds.size);
+    console.log('Total fetched conversations:', conversations.length);
+    
+    // Additional debug: Check if IDs are the same format
+    if (existingConvoIds.size > 0 && conversations.length > 0) {
+      const existingId = Array.from(existingConvoIds)[0];
+      const fetchedId = conversations[0].id;
+      console.log('ID format comparison - Existing:', existingId, 'Fetched:', fetchedId);
+      console.log('Are they equal?', existingId === fetchedId);
+      console.log('Existing ID type:', typeof existingId, 'Fetched ID type:', typeof fetchedId);
+    }
+    
     // Filter for conversations that don't exist in database yet
-    const conversationsToProcess = conversations.filter(c => !existingConvoIds.has(c.id));
+    const conversationsToProcess = conversations.filter(c => {
+      const exists = existingConvoIds.has(c.id);
+      return !exists;
+    });
+    
+    // Log filtering results
+    if (existingConvoIds.size > 0) {
+      console.log(`Filtered conversations: ${conversations.length} total → ${conversationsToProcess.length} new`);
+      if (conversationsToProcess.length > 0) {
+        console.log('Sample new conversations:', conversationsToProcess.slice(0, 3).map(c => ({id: c.id, title: c.title})));
+      }
+    } else {
+      console.log('No existing conversations in database, processing all fetched conversations');
+    }
     
     console.log(`Found ${conversations.length} total conversations, ${conversationsToProcess.length} new conversations to process`);
-    console.log(`Existing conversations in DB: ${existingConvoIds.size}`);
     crawlProgress.total = conversationsToProcess.length;
     
     const allDocs = [];
@@ -2247,9 +2275,8 @@ async function crawlConversationsInContent(lastSync) {
         crawlProgress.current += batch.length;
         console.log(`Completed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(conversationsToProcess.length / BATCH_SIZE)}: ${crawlProgress.current}/${crawlProgress.total} conversations processed`);
         
-        // Update indicator with current progress (estimate messages processed)
-        const estimatedMessages = crawlProgress.current * 10; // Rough estimate
-        updateIndexingProgress(estimatedMessages);
+        // Update indicator with actual messages processed so far
+        updateIndexingProgress(allDocs.length);
         
         // Small delay between batches to be respectful to the API
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -2262,6 +2289,9 @@ async function crawlConversationsInContent(lastSync) {
     
     // Send all docs to background for storage
     if (allDocs.length > 0) {
+      // Update indicator with final count before saving
+      updateIndexingProgress(allDocs.length);
+      
       const saveResponse = await sendMessageToBackground('saveDocs', { docs: allDocs });
       if (saveResponse.success) {
         console.log(`Saved ${allDocs.length} documents to database`);
@@ -2548,32 +2578,32 @@ async function processConversationInContent(convo, headers) {
       
       if (message.content && message.content.parts && Array.isArray(message.content.parts)) {
         const parts = message.content.parts;
+        let textParts = [];
         
-        // Safely check if any part has content
-        const hasContent = parts.some(part => {
-          return part && typeof part === 'string' && part.trim().length > 0;
-        });
-        
-        if (hasContent) {
-          // Safely filter and process parts
-          const validParts = parts
-            .filter(part => part && typeof part === 'string' && part.trim().length > 0)
-            .map(part => part.trim());
-          
-          if (validParts.length > 0) {
-            const text = validParts.join('\n');
-            
-            if (text.length > 0) {
-              docs.push({
-                id: message.id || `msg_${nodeId}`,
-                convoId: convo.id,
-                role: message.author?.role || 'unknown',
-                text: text,
-                time: message.create_time || convo.update_time || Date.now(),
-                title: title
-              });
+        // Process each part, handling both string parts and audio_transcription objects
+        for (const part of parts) {
+          if (typeof part === 'string' && part.trim().length > 0) {
+            // Standard text part
+            textParts.push(part.trim());
+          } else if (part && typeof part === 'object' && part.audio_transcription) {
+            // Voice chat transcription part
+            if (part.audio_transcription.text && part.audio_transcription.text.trim().length > 0) {
+              textParts.push(`[Voice] ${part.audio_transcription.text.trim()}`);
             }
           }
+        }
+        
+        if (textParts.length > 0) {
+          const text = textParts.join('\n');
+          
+          docs.push({
+            id: message.id || `msg_${nodeId}`,
+            convoId: convo.id,
+            role: message.author?.role || 'unknown',
+            text: text,
+            time: message.create_time || convo.update_time || Date.now(),
+            title: title
+          });
         }
       }
     }
