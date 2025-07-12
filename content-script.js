@@ -2122,28 +2122,54 @@ function getApiHeaders() {
 // Extract authorization token from the page
 function getAuthToken() {
   try {
-    // Method 1: Try to get from localStorage
+    // Method 1: Try to extract from window.__reactRouterContext (primary method for ChatGPT)
+    try {
+      // Parse the stream data to find accessToken
+      const scripts = document.querySelectorAll('script');
+      for (const script of scripts) {
+        if (script.textContent && script.textContent.includes('accessToken')) {
+          const content = script.textContent;
+          // Look for the accessToken in the script content with escaped quotes
+          const accessTokenMatch = content.match(/\\"accessToken\\",\\"([^"\\]+)\\"/);
+          if (accessTokenMatch && accessTokenMatch[1]) {
+            console.log('Found auth token in __reactRouterContext script');
+            return accessTokenMatch[1];
+          }
+          
+          // Try alternative pattern without escaped quotes
+          const altTokenMatch = content.match(/"accessToken","([^"]+)"/);
+          if (altTokenMatch && altTokenMatch[1]) {
+            console.log('Found auth token in script (alternative pattern)');
+            return altTokenMatch[1];
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Error parsing __reactRouterContext:', e);
+    }
+    
+    // Method 2: Try to get from localStorage
     const accessToken = localStorage.getItem('accessToken');
     if (accessToken) {
       console.log('Found auth token in localStorage');
       return accessToken;
     }
     
-    // Method 2: Try to get from sessionStorage
+    // Method 3: Try to get from sessionStorage
     const sessionStorageToken = sessionStorage.getItem('accessToken');
     if (sessionStorageToken) {
       console.log('Found auth token in sessionStorage');
       return sessionStorageToken;
     }
     
-    // Method 3: Try to extract from the page's JavaScript context
+    // Method 4: Try to extract from the page's JavaScript context
     // Look for the token in the window object or global variables
     if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.accessToken) {
       console.log('Found auth token in __NEXT_DATA__');
       return window.__NEXT_DATA__.props.accessToken;
     }
     
-    // Method 4: Try to get from cookies
+    // Method 5: Try to get from cookies
     const cookies = document.cookie.split(';');
     for (const cookie of cookies) {
       if (!cookie || typeof cookie !== 'string') continue;
@@ -2161,13 +2187,13 @@ function getAuthToken() {
       }
     }
     
-    // Method 5: Try to extract from the page's global state
+    // Method 6: Try to extract from the page's global state
     // ChatGPT might store the token in a global variable
     if (window.__NEXT_DATA__) {
       console.log('__NEXT_DATA__ available:', Object.keys(window.__NEXT_DATA__));
     }
     
-    // Method 6: Try to get from the session token cookie
+    // Method 7: Try to get from the session token cookie
     // ChatGPT uses a session token cookie for authentication
     const sessionCookieToken = getCookie('__Secure-next-auth.session-token');
     if (sessionCookieToken) {
@@ -2175,7 +2201,7 @@ function getAuthToken() {
       return sessionCookieToken;
     }
     
-    // Method 7: Try to get from other common cookie names
+    // Method 8: Try to get from other common cookie names
     const commonTokenNames = [
       'session-token',
       'auth-token',
@@ -2193,12 +2219,11 @@ function getAuthToken() {
       }
     }
     
-    // console.warn('Could not find authorization token automatically');
-    return 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjE5MzQ0ZTY1LWJiYzktNDRkMS1hOWQwLWY5NTdiMDc5YmQwZSIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS92MSJdLCJjbGllbnRfaWQiOiJhcHBfWDh6WTZ2VzJwUTl0UjNkRTduSzFqTDVnSCIsImV4cCI6MTc1Mjg1ODY5OSwiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS9hdXRoIjp7InVzZXJfaWQiOiJ1c2VyLXRtZXdTNzNWcjlCeXM2WnhVUndPWXJBMSJ9LCJodHRwczovL2FwaS5vcGVuYWkuY29tL3Byb2ZpbGUiOnsiZW1haWwiOiIwOTYxMDIwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlfSwiaWF0IjoxNzUxOTk0Njk5LCJpc3MiOiJodHRwczovL2F1dGgub3BlbmFpLmNvbSIsImp0aSI6IjY4MGM1ZjA2LTZjNGYtNDgwYS04MjEyLWUxZjg4YTllZDI2ZCIsIm5iZiI6MTc1MTk5NDY5OSwicHdkX2F1dGhfdGltZSI6MTc1MTk5NDY5NzUwNCwic2NwIjpbIm9wZW5pZCIsImVtYWlsIiwicHJvZmlsZSIsIm9mZmxpbmVfYWNjZXNzIiwibW9kZWwucmVxdWVzdCIsIm1vZGVsLnJlYWQiLCJvcmdhbml6YXRpb24ucmVhZCIsIm9yZ2FuaXphdGlvbi53cml0ZSJdLCJzZXNzaW9uX2lkIjoiYXV0aHNlc3NfeWpqUTV4NnZLc0laM0Zuc1JubGR5NTNWIiwic3ViIjoiZ29vZ2xlLW9hdXRoMnwxMTc0ODEzNzA4MjcxMjI4MTM4NDAifQ.N4rAgNHnsGEF6lUH3hbOmJDGsDu482FtYBd7n6HSmHXMfA1objBDgjIGmTqB-2cOK0aSVP41WxtqNKmgiJzJlr2lM62qJCDLmZs0ohIw0LYBsgRBZlXG499r3VKciBf7fGzEkPSIojygVJqLlbyvuZdcvF8fU192ipIZ0eCH2hKO7idocbUo9julJSwU1MEj4ue2B3iq93cAbyUkxaPee72N07J0BY4_RPM8k7xWhE2Byr42rIB_qz-Z-l38Szm1b2CuDSea2MthAXVw2Rs-8Gpy9a0aEq0SC-kRkceSo8y9BuHSu0oezXF0BABtv7jAWrLBvRZWCstMX9niKBiqw7Ulcn-QX7dytZ3XhnOHc1e01ctT_qov9LCu-zY83VgPT_qV7lxLBCKzTmY-KkIzTdOxQEgFDFFTcJbWf9mvPG9rtBme42JqKF98TDZMjMMTKYCmsxZUgQnj629aE5rnNhXbD6Ni-rCWTEL2_m67eK_xEJKF0f4tXrApAD1ZFBhViaCr_e2ABuf_Lig9ETM12MVoidlH4Xc1nhYNR0VLIUxOU9NUArThcQuf7VWy_Koxq4g5NQ88gJkxmglfx6Nj_s42xFMrncUDe0erRxiCeAiDNNYGOPJp-NrUeXA9CBi_-u-522A59X_WrmpOu1V0K84edlg0MBelx4MXkBLyYq8';
+    console.warn('Could not find authorization token automatically');
     
   } catch (error) {
-    // console.error('Error getting auth token:', error);
-    return 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjE5MzQ0ZTY1LWJiYzktNDRkMS1hOWQwLWY5NTdiMDc5YmQwZSIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS92MSJdLCJjbGllbnRfaWQiOiJhcHBfWDh6WTZ2VzJwUTl0UjNkRTduSzFqTDVnSCIsImV4cCI6MTc1Mjg1ODY5OSwiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS9hdXRoIjp7InVzZXJfaWQiOiJ1c2VyLXRtZXdTNzNWcjlCeXM2WnhVUndPWXJBMSJ9LCJodHRwczovL2FwaS5vcGVuYWkuY29tL3Byb2ZpbGUiOnsiZW1haWwiOiIwOTYxMDIwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlfSwiaWF0IjoxNzUxOTk0Njk5LCJpc3MiOiJodHRwczovL2F1dGgub3BlbmFpLmNvbSIsImp0aSI6IjY4MGM1ZjA2LTZjNGYtNDgwYS04MjEyLWUxZjg4YTllZDI2ZCIsIm5iZiI6MTc1MTk5NDY5OSwicHdkX2F1dGhfdGltZSI6MTc1MTk5NDY5NzUwNCwic2NwIjpbIm9wZW5pZCIsImVtYWlsIiwicHJvZmlsZSIsIm9mZmxpbmVfYWNjZXNzIiwibW9kZWwucmVxdWVzdCIsIm1vZGVsLnJlYWQiLCJvcmdhbml6YXRpb24ucmVhZCIsIm9yZ2FuaXphdGlvbi53cml0ZSJdLCJzZXNzaW9uX2lkIjoiYXV0aHNlc3NfeWpqUTV4NnZLc0laM0Zuc1JubGR5NTNWIiwic3ViIjoiZ29vZ2xlLW9hdXRoMnwxMTc0ODEzNzA4MjcxMjI4MTM4NDAifQ.N4rAgNHnsGEF6lUH3hbOmJDGsDu482FtYBd7n6HSmHXMfA1objBDgjIGmTqB-2cOK0aSVP41WxtqNKmgiJzJlr2lM62qJCDLmZs0ohIw0LYBsgRBZlXG499r3VKciBf7fGzEkPSIojygVJqLlbyvuZdcvF8fU192ipIZ0eCH2hKO7idocbUo9julJSwU1MEj4ue2B3iq93cAbyUkxaPee72N07J0BY4_RPM8k7xWhE2Byr42rIB_qz-Z-l38Szm1b2CuDSea2MthAXVw2Rs-8Gpy9a0aEq0SC-kRkceSo8y9BuHSu0oezXF0BABtv7jAWrLBvRZWCstMX9niKBiqw7Ulcn-QX7dytZ3XhnOHc1e01ctT_qov9LCu-zY83VgPT_qV7lxLBCKzTmY-KkIzTdOxQEgFDFFTcJbWf9mvPG9rtBme42JqKF98TDZMjMMTKYCmsxZUgQnj629aE5rnNhXbD6Ni-rCWTEL2_m67eK_xEJKF0f4tXrApAD1ZFBhViaCr_e2ABuf_Lig9ETM12MVoidlH4Xc1nhYNR0VLIUxOU9NUArThcQuf7VWy_Koxq4g5NQ88gJkxmglfx6Nj_s42xFMrncUDe0erRxiCeAiDNNYGOPJp-NrUeXA9CBi_-u-522A59X_WrmpOu1V0K84edlg0MBelx4MXkBLyYq8';
+    console.error('Error getting auth token:', error);
+    return null
   }
 }
 
