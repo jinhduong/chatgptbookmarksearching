@@ -240,6 +240,21 @@
             overflow-x: auto;
         }
 
+        /* Demo video */
+        .demo-video {
+            margin-top: 60px;
+            text-align: center;
+        }
+
+        .demo-video video {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e5e5;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .hero h1 {
@@ -262,22 +277,28 @@
     </style>
 </head>
 <body>
-    <header>
+    <!-- <header>
         <div class="container">
             <div class="header-content">
                 <div class="logo">ChatGPT Bookmarks</div>
                 <a href="https://github.com/yourusername/chatgptbookmarksearching" class="github-btn">View on GitHub</a>
             </div>
         </div>
-    </header>
+    </header> -->
 
     <section class="hero">
         <div class="container">
             <h1>Search & bookmark your<br>ChatGPT conversations</h1>
             <p>A Chrome extension that adds full-text search and bookmarking to ChatGPT. Never lose an important conversation again.</p>
             <div class="hero-buttons">
-                <a href="https://github.com/yourusername/chatgptbookmarksearching" class="primary-btn">Download Extension</a>
+                <a href="https://chromewebstore.google.com/detail/gcogeheolhggoobjcfbkohdajenpnbmb/preview?hl=en&authuser=0" class="primary-btn">Add to Chrome</a>
                 <div class="shortcut">⌘ + S to search</div>
+            </div>
+            <div class="demo-video">
+                <video controls autoplay muted loop>
+                    <source src="img/demo.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         </div>
     </section>
@@ -300,35 +321,6 @@
                     <h3>Privacy First</h3>
                     <p>All data stays local in your browser. No external servers, no data collection.</p>
                 </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="installation">
-        <div class="container">
-            <h2>Quick Install</h2>
-            <div class="install-steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h3>Download</h3>
-                    <p>Clone the repo or download ZIP from GitHub</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h3>Load Extension</h3>
-                    <p>Go to chrome://extensions/ and load unpacked</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h3>Start Using</h3>
-                    <p>Visit ChatGPT and press ⌘+S to search</p>
-                </div>
-            </div>
-
-            <div class="code-block">
-git clone https://github.com/yourusername/chatgptbookmarksearching.git
-cd chatgptbookmarksearching
-# Load the folder as unpacked extension in Chrome
             </div>
         </div>
     </section>

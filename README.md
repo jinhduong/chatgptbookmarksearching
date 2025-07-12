@@ -2,6 +2,8 @@
 
 A powerful Chrome extension that adds bookmarking and full-text search functionality to ChatGPT conversations.
 
+![Search Feature](docs/img/search.png)
+
 ## Features
 
 ### 🔍 Full-Text Search
@@ -15,27 +17,27 @@ A powerful Chrome extension that adds bookmarking and full-text search functiona
 - **Persistent Storage**: All bookmarks are saved locally using IndexedDB
 - **Easy Management**: View and manage bookmarks in the sidebar and extension popup
 
+![Bookmark Feature](docs/img/bookmark.png)
+
 ### 🚀 Advanced Features
 - **Incremental Sync**: Automatically syncs new conversations without re-indexing everything
 - **Message Navigation**: Click search results to navigate directly to specific messages
 - **Dark Theme**: Seamlessly integrates with ChatGPT's dark theme
 - **Draggable Interface**: Move the search popup anywhere on screen
 
-## Installation
+![Bookmark Toggle](docs/img/bookmark_toggle.png)
 
-1. **Download the Extension**
-   - Clone this repository: `git clone https://github.com/yourusername/chatgpt-bookmark-extension.git`
-   - Or download the ZIP file and extract it
+## Add to Google Chrome
 
-2. **Load in Chrome**
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode" in the top right
-   - Click "Load unpacked" and select the extension folder
+**Option 1: Chrome Web Store (Recommended)**
+- [Add to Chrome](https://chrome.google.com/webstore) - *Coming Soon*
 
-3. **First Time Setup**
-   - Visit ChatGPT (https://chatgpt.com)
-   - The extension will automatically start indexing your conversations
-   - Wait for the "Indexed X messages" notification to appear
+**Option 2: Install from Source**
+1. Download or clone this repository
+2. Open Chrome and go to `chrome://extensions/`
+3. Enable "Developer mode" in the top right
+4. Click "Load unpacked" and select the extension folder
+5. Visit ChatGPT (https://chatgpt.com) to start using the extension
 
 ## Usage
 
@@ -49,6 +51,8 @@ A powerful Chrome extension that adds bookmarking and full-text search functiona
 - **Add Bookmark**: Click the star (★) icon next to any conversation in the sidebar
 - **View Bookmarks**: See all bookmarks in the sidebar "Bookmarks" section
 - **Remove Bookmark**: Click the star icon again to remove a bookmark
+
+![Manage Bookmarks](docs/img/manage_bookmark.png)
 
 ### Manual Controls
 Access debug and manual controls via the browser console:

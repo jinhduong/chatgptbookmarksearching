@@ -92,3 +92,4 @@ docs/_build/
 # Local configuration files
 config.local.js
 settings.local.json 
+build/
