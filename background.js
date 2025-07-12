@@ -15,6 +15,10 @@ let db = null;
 let searchIndex = null;
 let docsIndex = null;
 
+// Indexing status tracking
+let isIndexing = false;
+let indexingProgress = 0;
+
 // Conversation crawl is now handled in content script
 
 // Initialize extension
@@ -203,6 +207,41 @@ async function initializeDocsIndex() {
   console.log(`Loaded ${docs.length} documents into search index`);
 }
 
+// Update indexing status
+function updateIndexingStatus(indexing, progress = 0) {
+  isIndexing = indexing;
+  indexingProgress = progress;
+  
+  // Send progress update to all popup instances
+  if (indexing) {
+    broadcastMessage({
+      type: 'indexingProgress',
+      messageCount: progress
+    });
+  } else {
+    broadcastMessage({
+      type: 'indexingComplete'
+    });
+  }
+}
+
+// Broadcast message to all extension contexts
+function broadcastMessage(message) {
+  // Send to popup
+  chrome.runtime.sendMessage(message).catch(() => {
+    // Ignore errors if no popup is open
+  });
+  
+  // Send to all content scripts
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach(tab => {
+      chrome.tabs.sendMessage(tab.id, message).catch(() => {
+        // Ignore errors if content script not loaded
+      });
+    });
+  });
+}
+
 // Migration function to handle data structure changes
 async function migrateDataIfNeeded() {
   if (!db) await initializeDatabase();
@@ -323,6 +362,9 @@ async function saveDoc(doc) {
 async function saveDocs(docs) {
   if (!db) await initializeDatabase();
   
+  // Update indexing status to show we're starting
+  updateIndexingStatus(true, 0);
+  
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([DOCS_STORE], 'readwrite');
     const store = transaction.objectStore(DOCS_STORE);
@@ -333,9 +375,20 @@ async function saveDocs(docs) {
     docs.forEach(doc => {
       const request = store.put(doc);
       
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        // Mark indexing as complete even on error
+        updateIndexingStatus(false, processed);
+        reject(request.error);
+      };
+      
       request.onsuccess = async () => {
         processed++;
+        
+        // Update progress every 10 documents or on completion
+        if (processed % 10 === 0 || processed === total) {
+          updateIndexingStatus(true, processed);
+        }
+        
         if (processed === total) {
           // Update search index for all docs
           if (docsIndex) {
@@ -343,6 +396,9 @@ async function saveDocs(docs) {
               await docsIndex.add(doc);
             }
           }
+          
+          // Mark indexing as complete
+          updateIndexingStatus(false, processed);
           resolve(processed);
         }
       };
@@ -686,6 +742,16 @@ async function handleMessage(request, sender, sendResponse) {
       case 'saveMeta':
         await saveMeta(request.key, request.value);
         sendResponse({ success: true });
+        break;
+        
+      case 'getIndexingStatus':
+        sendResponse({ 
+          success: true, 
+          data: { 
+            isIndexing: isIndexing, 
+            progress: indexingProgress 
+          } 
+        });
         break;
         
       case 'saveDocs':

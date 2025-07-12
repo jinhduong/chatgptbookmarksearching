@@ -6,6 +6,8 @@ let searchInput = null;
 let bookmarkCount = null;
 let emptyState = null;
 let loading = null;
+let indexingStatus = null;
+let indexingProgress = null;
 let stats = null;
 let filterButtons = null;
 let folderTree = null;
@@ -38,6 +40,8 @@ async function initializePopup() {
     bookmarkCount = document.getElementById('bookmarkCount');
     emptyState = document.getElementById('emptyState');
     loading = document.getElementById('loading');
+    indexingStatus = document.getElementById('indexingStatus');
+    indexingProgress = document.getElementById('indexingProgress');
     stats = document.getElementById('stats');
     filterButtons = document.getElementById('filterButtons');
     folderTree = document.getElementById('folderTree');
@@ -56,6 +60,9 @@ async function initializePopup() {
     // Load folders and bookmarks
     await loadFolders();
     await loadBookmarks();
+    
+    // Check indexing status
+    checkIndexingStatus();
 
   } catch (error) {
     console.error('Failed to initialize popup:', error);
@@ -1096,6 +1103,58 @@ function formatTimestamp(timestamp) {
     return date.toLocaleDateString();
   }
 }
+
+// Check indexing status
+async function checkIndexingStatus() {
+  try {
+    const response = await sendMessageToBackground('getIndexingStatus');
+    if (response.success && response.data) {
+      const { isIndexing, progress } = response.data;
+      if (isIndexing) {
+        showIndexingStatus(progress || 0);
+      } else {
+        hideIndexingStatus();
+      }
+    }
+  } catch (error) {
+    console.error('Failed to check indexing status:', error);
+  }
+}
+
+// Show indexing status
+function showIndexingStatus(messageCount = 0) {
+  if (indexingStatus) {
+    indexingStatus.classList.add('show');
+  }
+  if (indexingProgress) {
+    indexingProgress.textContent = `${messageCount} messages`;
+  }
+}
+
+// Hide indexing status
+function hideIndexingStatus() {
+  if (indexingStatus) {
+    indexingStatus.classList.remove('show');
+  }
+}
+
+// Update indexing progress
+function updateIndexingProgress(messageCount) {
+  if (indexingProgress) {
+    indexingProgress.textContent = `${messageCount} messages`;
+  }
+}
+
+// Listen for indexing updates from background script
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'indexingProgress') {
+    showIndexingStatus(message.messageCount);
+  } else if (message.type === 'indexingComplete') {
+    hideIndexingStatus();
+    // Refresh bookmarks to show any new ones
+    loadBookmarks();
+  }
+});
 
 // Add CSS animation for notifications
 const style = document.createElement('style');

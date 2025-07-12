@@ -23,6 +23,9 @@ let searchResults = null;
 let bookmarksSection = null;
 let bookmarksList = null;
 
+// Indexing status elements
+let indexingIndicator = null;
+
 // Floating popup elements
 let floatingPopup = null;
 let floatingSearchInput = null;
@@ -57,6 +60,7 @@ function initializeExtension() {
     createBookmarkMenuItem();
     // createBookmarksSection();
     createFloatingPopup();
+    createIndexingIndicator();
     
     // Auto-display the floating popup by default
     // showFloatingPopup();
@@ -78,6 +82,9 @@ function initializeExtension() {
     
     // Process existing chat entries
     processExistingChats();
+    
+    // Check for ongoing indexing status
+    setTimeout(checkIndexingStatus, 1000);
     
     // Auto-start conversation crawl if needed
     setTimeout(autoStartCrawl, 2000);
@@ -133,159 +140,141 @@ function createSearchBar() {
   sidebar.insertBefore(searchContainer, sidebar.firstChild);
 }
 
-// Create bookmark menu item
+// Create bookmark menu item with modern, simplified approach
 function createBookmarkMenuItem() {
-  // Find the target container (the element after pt-(--sidebar-section-first-margin-top))
-  // Try multiple selectors to find the right location
-  const targetContainer = document.querySelector('.pt-\\(--sidebar-section-first-margin-top\\)') ||
-                         document.querySelector('[class*="pt-"][class*="sidebar-section-first-margin-top"]') ||
-                         document.querySelector('nav[aria-label="Chat history"] > div:first-child') ||
-                         document.querySelector('nav[aria-label="Chat history"] .flex.flex-col.gap-2.pb-2.text-token-text-primary.text-sm') ||
-                         document.querySelector('nav[aria-label="Chat history"] > div') ||
-                         document.querySelector('nav[aria-label="Chat history"]');
+  // Skip if already exists
+  if (document.querySelector(`.${EXTENSION_PREFIX}-menu-item`)) return;
   
-  console.log('Looking for target container, found:', targetContainer);
-  
-  if (!targetContainer || document.querySelector(`.${EXTENSION_PREFIX}-menu-item`)) {
-    console.log('Target container not found or menu item already exists');
-    // If we can't find the target, try again later
-    setTimeout(() => {
-      if (!document.querySelector(`.${EXTENSION_PREFIX}-menu-item`)) {
-        console.log('Retrying createBookmarkMenuItem...');
-        createBookmarkMenuItem();
-      }
-    }, 2000);
+  // Find sidebar with simple, robust selector
+  const sidebar = document.querySelector('nav[aria-label="Chat history"]');
+  if (!sidebar) {
+    setTimeout(createBookmarkMenuItem, 1000);
     return;
   }
 
-  // Create bookmark menu item
-  bookmarkMenuItem = document.createElement('button');
-  bookmarkMenuItem.className = `group __menu-item hoverable ${EXTENSION_PREFIX}-menu-item`;
-  bookmarkMenuItem.style.cssText = `
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    margin: 0 8px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 20px;
-    text-align: left;
-    width: calc(100% - 16px);
-    transition: background-color 0.15s ease;
-    position: relative;
+  // Create modern menu item
+  bookmarkMenuItem = document.createElement('div');
+  bookmarkMenuItem.className = `${EXTENSION_PREFIX}-menu-item`;
+  bookmarkMenuItem.innerHTML = `
+    <button class="${EXTENSION_PREFIX}-menu-button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+      </svg>
+      <span>Bookmarks</span>
+      <div class="${EXTENSION_PREFIX}-badge" style="display: none;">0</div>
+    </button>
+    <div class="${EXTENSION_PREFIX}-dropdown" style="display: none;"></div>
   `;
 
-  // Create icon
-  const icon = document.createElement('div');
-  icon.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-    </svg>
+  // Add modern styles
+  const style = document.createElement('style');
+  style.textContent = `
+    .${EXTENSION_PREFIX}-menu-item {
+      position: relative;
+      margin: 8px;
+    }
+    
+    .${EXTENSION_PREFIX}-menu-button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: #ececec;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    
+    .${EXTENSION_PREFIX}-menu-button:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .${EXTENSION_PREFIX}-menu-button svg {
+      flex-shrink: 0;
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+    }
+    
+    .${EXTENSION_PREFIX}-menu-button:hover svg {
+      opacity: 1;
+    }
+    
+    .${EXTENSION_PREFIX}-menu-button span {
+      flex: 1;
+      text-align: left;
+    }
+    
+    .${EXTENSION_PREFIX}-badge {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border-radius: 12px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      min-width: 20px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+    
+    .${EXTENSION_PREFIX}-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: #1f1f1f;
+      border: 1px solid #333;
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(16px);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 10000;
+      animation: slideDown 0.2s ease;
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
   `;
+  
+  // Add styles to document if not already added
+  if (!document.querySelector(`#${EXTENSION_PREFIX}-menu-styles`)) {
+    style.id = `${EXTENSION_PREFIX}-menu-styles`;
+    document.head.appendChild(style);
+  }
 
-  // Create text
-  const text = document.createElement('span');
-  text.textContent = 'Bookmarks';
-
-  // Create badge for bookmark count
-  const badge = document.createElement('div');
-  badge.className = `${EXTENSION_PREFIX}-menu-badge`;
-  badge.textContent = '0';
-  badge.style.cssText = `
-    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-    color: rgba(255, 255, 255, 0.8);
-    border-radius: 10px;
-    padding: 2px 6px;
-    font-size: 11px;
-    font-weight: 500;
-    margin-left: auto;
-    min-width: 16px;
-    text-align: center;
-    display: none;
-  `;
-
-  // Assemble menu item
-  bookmarkMenuItem.appendChild(icon);
-  bookmarkMenuItem.appendChild(text);
-  bookmarkMenuItem.appendChild(badge);
-
-  // Create dropdown
-  bookmarkDropdown = document.createElement('div');
-  bookmarkDropdown.className = `${EXTENSION_PREFIX}-dropdown`;
-  bookmarkDropdown.style.cssText = `
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: #2f2f2f;
-    border: 1px solid #4a4a4a;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    max-height: 320px;
-    overflow-y: auto;
-    z-index: 10000;
-    display: none;
-    margin-top: 4px;
-    min-width: 200px;
-    padding: 4px 0;
-  `;
-
-  // Add hover effect
-  bookmarkMenuItem.addEventListener('mouseenter', () => {
-    bookmarkMenuItem.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-  });
-
-  bookmarkMenuItem.addEventListener('mouseleave', () => {
-    bookmarkMenuItem.style.backgroundColor = 'transparent';
-  });
-
-  // Add click handler
-  bookmarkMenuItem.addEventListener('click', (e) => {
+  // Add event listeners
+  const button = bookmarkMenuItem.querySelector(`.${EXTENSION_PREFIX}-menu-button`);
+  bookmarkDropdown = bookmarkMenuItem.querySelector(`.${EXTENSION_PREFIX}-dropdown`);
+  
+  button.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Bookmark menu item clicked!');
     toggleBookmarkDropdown();
   });
 
-  // Create a wrapper container for relative positioning
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = `
-    position: relative;
-    width: 100%;
-  `;
-  
-  // Add bookmark item to wrapper
-  wrapper.appendChild(bookmarkMenuItem);
-  wrapper.appendChild(bookmarkDropdown);
-  
-  // Insert wrapper after the target container
-  if (targetContainer.parentNode) {
-    targetContainer.parentNode.insertBefore(wrapper, targetContainer.nextSibling);
-  } else {
-    // Fallback: append to sidebar directly
-    const sidebar = document.querySelector('nav[aria-label="Chat history"]');
-    if (sidebar) {
-      sidebar.appendChild(wrapper);
-    }
-  }
-  
-  console.log('Bookmark menu item created and inserted into DOM');
+  // Insert at the top of sidebar
+  sidebar.insertBefore(bookmarkMenuItem, sidebar.firstChild);
 
   // Close dropdown when clicking outside
   document.addEventListener('click', (e) => {
-    if (!bookmarkMenuItem.contains(e.target) && !bookmarkDropdown.contains(e.target)) {
+    if (!bookmarkMenuItem.contains(e.target)) {
       hideBookmarkDropdown();
     }
   });
-  
-  // Debug: Check if elements are properly created
-  console.log('Bookmark menu item element:', bookmarkMenuItem);
-  console.log('Bookmark dropdown element:', bookmarkDropdown);
-  console.log('Target container:', targetContainer);
 }
 
 // Toggle bookmark dropdown
@@ -556,7 +545,7 @@ async function populateBookmarkDropdown() {
 
 // Update bookmark menu badge count
 function updateBookmarkMenuBadge(count) {
-  const badge = document.querySelector(`.${EXTENSION_PREFIX}-menu-badge`);
+  const badge = document.querySelector(`.${EXTENSION_PREFIX}-badge`);
   if (badge) {
     badge.textContent = count.toString();
     badge.style.display = count > 0 ? 'block' : 'none';
@@ -714,6 +703,194 @@ function renderBookmarksListCS(container, bookmarks, sectionTitle) {
     });
     container.appendChild(item);
   });
+}
+
+// Create indexing status indicator
+function createIndexingIndicator() {
+  // Check if indicator already exists
+  if (indexingIndicator || document.querySelector(`.${EXTENSION_PREFIX}-indexing-indicator`)) {
+    return;
+  }
+  
+  // Create the indicator container
+  indexingIndicator = document.createElement('div');
+  indexingIndicator.className = `${EXTENSION_PREFIX}-indexing-indicator`;
+  indexingIndicator.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #e5e5e5;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 200px;
+    backdrop-filter: blur(10px);
+    animation: slideInFromRight 0.3s ease-out;
+  `;
+  
+  // Create spinner
+  const spinner = document.createElement('div');
+  spinner.className = `${EXTENSION_PREFIX}-indexing-spinner`;
+  spinner.style.cssText = `
+    width: 16px;
+    height: 16px;
+    border: 2px solid #444;
+    border-top: 2px solid #00a67e;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    flex-shrink: 0;
+  `;
+  
+  // Create text container
+  const textContainer = document.createElement('div');
+  textContainer.style.cssText = `
+    flex: 1;
+    min-width: 0;
+  `;
+  
+  // Create main text
+  const mainText = document.createElement('div');
+  mainText.textContent = 'Indexing chats...';
+  mainText.style.cssText = `
+    font-weight: 500;
+    color: #e5e5e5;
+    margin-bottom: 2px;
+  `;
+  
+  // Create progress text
+  const progressText = document.createElement('div');
+  progressText.className = `${EXTENSION_PREFIX}-indexing-progress`;
+  progressText.textContent = '0 messages processed';
+  progressText.style.cssText = `
+    font-size: 12px;
+    color: #999;
+    font-weight: 400;
+  `;
+  
+  // Assemble the indicator
+  textContainer.appendChild(mainText);
+  textContainer.appendChild(progressText);
+  indexingIndicator.appendChild(spinner);
+  indexingIndicator.appendChild(textContainer);
+  
+  // Add to document
+  document.body.appendChild(indexingIndicator);
+  
+  // Add CSS animations
+  addIndexingIndicatorStyles();
+  
+  console.log('Indexing indicator created');
+}
+
+// Add CSS styles for indexing indicator
+function addIndexingIndicatorStyles() {
+  if (document.querySelector(`#${EXTENSION_PREFIX}-indexing-styles`)) {
+    return;
+  }
+  
+  const style = document.createElement('style');
+  style.id = `${EXTENSION_PREFIX}-indexing-styles`;
+  style.textContent = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes slideInFromRight {
+      0% {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      100% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideOutToRight {
+      0% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+    
+    .${EXTENSION_PREFIX}-indexing-indicator.hiding {
+      animation: slideOutToRight 0.3s ease-in forwards;
+    }
+  `;
+  
+  document.head.appendChild(style);
+}
+
+// Show indexing indicator
+function showIndexingIndicator(messageCount = 0) {
+  if (!indexingIndicator) {
+    createIndexingIndicator();
+  }
+  
+  if (indexingIndicator) {
+    indexingIndicator.style.display = 'flex';
+    indexingIndicator.classList.remove('hiding');
+    
+    // Update progress text
+    const progressElement = indexingIndicator.querySelector(`.${EXTENSION_PREFIX}-indexing-progress`);
+    if (progressElement) {
+      progressElement.textContent = `${messageCount} messages processed`;
+    }
+  }
+}
+
+// Hide indexing indicator
+function hideIndexingIndicator() {
+  if (indexingIndicator) {
+    indexingIndicator.classList.add('hiding');
+    setTimeout(() => {
+      if (indexingIndicator) {
+        indexingIndicator.style.display = 'none';
+        indexingIndicator.classList.remove('hiding');
+      }
+    }, 300);
+  }
+}
+
+// Update indexing progress
+function updateIndexingProgress(messageCount) {
+  if (indexingIndicator) {
+    const progressElement = indexingIndicator.querySelector(`.${EXTENSION_PREFIX}-indexing-progress`);
+    if (progressElement) {
+      progressElement.textContent = `${messageCount} messages processed`;
+    }
+  }
+}
+
+// Check current indexing status from background
+async function checkIndexingStatus() {
+  try {
+    const response = await sendMessageToBackground('getIndexingStatus');
+    if (response.success && response.data) {
+      const { isIndexing, progress } = response.data;
+      if (isIndexing) {
+        showIndexingIndicator(progress || 0);
+      } else {
+        hideIndexingIndicator();
+      }
+    }
+  } catch (error) {
+    console.error('Failed to check indexing status:', error);
+  }
 }
 
 // Create floating search popup
@@ -1846,7 +2023,7 @@ window.addEventListener('load', () => {
 });
 
 // Handle extension messages
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request) => {
   switch (request.action) {
     case 'refresh':
       loadBookmarks();
@@ -1856,6 +2033,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         searchInput.value = request.query;
         performSearch(request.query);
       }
+      break;
+  }
+  
+  // Handle indexing status updates
+  switch (request.type) {
+    case 'indexingProgress':
+      showIndexingIndicator(request.messageCount || 0);
+      break;
+    case 'indexingComplete':
+      hideIndexingIndicator();
       break;
   }
 });
@@ -1988,8 +2175,10 @@ async function getCrawlStatus() {
 
 // Crawl conversations in content script with proper headers/cookies
 async function crawlConversationsInContent(lastSync) {
-  let isCrawling = true;
   let crawlProgress = { current: 0, total: 0 };
+  
+  // Show indexing indicator when starting
+  showIndexingIndicator(0);
 
   // Check if we should skip crawling based on last sync time
   const currentTime = Date.now();
@@ -1998,6 +2187,10 @@ async function crawlConversationsInContent(lastSync) {
   if (lastSync && (currentTime - lastSync) < oneHourInMs) {
     const timeSinceLastSync = Math.round((currentTime - lastSync) / (60 * 1000)); // minutes
     console.log(`Skipping crawl - last sync was ${timeSinceLastSync} minutes ago (less than 1 hour)`);
+    
+    // Hide indicator since we're not crawling
+    hideIndexingIndicator();
+    
     return { 
       success: true, 
       processed: 0, 
@@ -2054,6 +2247,10 @@ async function crawlConversationsInContent(lastSync) {
         crawlProgress.current += batch.length;
         console.log(`Completed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(conversationsToProcess.length / BATCH_SIZE)}: ${crawlProgress.current}/${crawlProgress.total} conversations processed`);
         
+        // Update indicator with current progress (estimate messages processed)
+        const estimatedMessages = crawlProgress.current * 10; // Rough estimate
+        updateIndexingProgress(estimatedMessages);
+        
         // Small delay between batches to be respectful to the API
         await new Promise(resolve => setTimeout(resolve, 200));
         
@@ -2081,12 +2278,17 @@ async function crawlConversationsInContent(lastSync) {
     }
     console.log(`Updated last sync timestamp to ${now}`);
     
-    isCrawling = false;
+    // Hide indexing indicator when complete
+    hideIndexingIndicator();
+    
     return { success: true, processed: allDocs.length };
     
   } catch (error) {
     console.error('Crawl failed:', error);
-    isCrawling = false;
+    
+    // Hide indexing indicator on error
+    hideIndexingIndicator();
+    
     return { success: false, error: error.message };
   }
 }

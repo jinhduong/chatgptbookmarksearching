@@ -495,6 +495,59 @@
             100% { transform: rotate(360deg); }
         }
 
+        @keyframes slideDown {
+            0% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .indexing-status {
+            display: none;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            animation: slideDown 0.3s ease;
+        }
+
+        .indexing-status.show {
+            display: block;
+        }
+
+        .indexing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .indexing-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #333;
+            border-top: 2px solid #00a67e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+
+        .indexing-text {
+            color: #ececec;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .indexing-progress {
+            color: #999;
+            font-size: 12px;
+            margin-left: auto;
+        }
+
         .stats {
             display: flex;
             justify-content: space-between;
@@ -636,6 +689,14 @@
             <div class="loading" id="loading">
                 <div class="loading-spinner"></div>
                 <p>Loading bookmarks...</p>
+            </div>
+
+            <div class="indexing-status" id="indexingStatus">
+                <div class="indexing-indicator">
+                    <div class="indexing-spinner"></div>
+                    <span class="indexing-text">Indexing chats...</span>
+                    <span class="indexing-progress" id="indexingProgress">0 messages</span>
+                </div>
             </div>
 
             <div class="bookmarks-list" id="bookmarksList"></div>
