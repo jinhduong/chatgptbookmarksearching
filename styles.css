@@ -1,0 +1,729 @@
+/* ChatGPT Bookmark Extension Styles */
+
+/* Search Bar Styling */
+.chatgpt-bookmark-search-container {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #171717;
+  border-bottom: 1px solid #2a2a2a;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.chatgpt-bookmark-search-wrapper {
+  position: relative;
+}
+
+.chatgpt-bookmark-search-input {
+  width: 100%;
+  background: #2a2a2a;
+  border: 1px solid #4a4a4a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #ececec;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.chatgpt-bookmark-search-input:focus {
+  border-color: #5a5a5a;
+  box-shadow: 0 0 0 2px rgba(90, 90, 90, 0.2);
+}
+
+.chatgpt-bookmark-search-input::placeholder {
+  color: #8e8e8e;
+}
+
+/* Search Results Dropdown */
+.chatgpt-bookmark-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #2a2a2a;
+  border: 1px solid #4a4a4a;
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1001;
+  display: none;
+}
+
+.chatgpt-bookmark-search-results.show {
+  display: block;
+}
+
+.chatgpt-bookmark-search-result {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #3a3a3a;
+  transition: background-color 0.2s;
+}
+
+.chatgpt-bookmark-search-result:hover {
+  background: #3a3a3a;
+}
+
+.chatgpt-bookmark-search-result:last-child {
+  border-bottom: none;
+}
+
+.chatgpt-bookmark-search-result-title {
+  font-weight: 500;
+  color: #ececec;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.chatgpt-bookmark-search-result-preview {
+  color: #8e8e8e;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.chatgpt-bookmark-search-result-timestamp {
+  color: #6a6a6a;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* Bookmark Icons */
+.chatgpt-bookmark-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: 8px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.chatgpt-bookmark-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.chatgpt-bookmark-icon.bookmarked {
+  color: #ffd700;
+  opacity: 1;
+}
+
+.chatgpt-bookmark-icon.bookmarked:hover {
+  color: #ffed4a;
+}
+
+/* Bookmark star icon */
+.chatgpt-bookmark-star {
+  fill: currentColor;
+  width: 16px;
+  height: 16px;
+}
+
+/* Bookmarks Section */
+.chatgpt-bookmarks-section {
+  background: #171717;
+  border-top: 1px solid #2a2a2a;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.chatgpt-bookmarks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.chatgpt-bookmarks-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ececec;
+}
+
+.chatgpt-bookmarks-count {
+  font-size: 12px;
+  color: #8e8e8e;
+  background: #2a2a2a;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.chatgpt-bookmarks-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.chatgpt-bookmark-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: #2a2a2a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chatgpt-bookmark-item:hover {
+  background: #3a3a3a;
+}
+
+.chatgpt-bookmark-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.chatgpt-bookmark-item-title {
+  font-size: 13px;
+  color: #ececec;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatgpt-bookmark-item-preview {
+  font-size: 11px;
+  color: #8e8e8e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatgpt-bookmark-item-timestamp {
+  font-size: 10px;
+  color: #6a6a6a;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* Empty State */
+.chatgpt-bookmarks-empty {
+  text-align: center;
+  padding: 24px;
+  color: #8e8e8e;
+  font-size: 13px;
+}
+
+/* Scrollbar Styling */
+.chatgpt-bookmark-search-results::-webkit-scrollbar,
+.chatgpt-bookmarks-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chatgpt-bookmark-search-results::-webkit-scrollbar-track,
+.chatgpt-bookmarks-list::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.chatgpt-bookmark-search-results::-webkit-scrollbar-thumb,
+.chatgpt-bookmarks-list::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 3px;
+}
+
+.chatgpt-bookmark-search-results::-webkit-scrollbar-thumb:hover,
+.chatgpt-bookmarks-list::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
+}
+
+/* Animation for bookmark toggling */
+@keyframes bookmarkPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chatgpt-bookmark-search-container {
+    padding: 12px;
+  }
+  
+  .chatgpt-bookmark-search-input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .chatgpt-bookmarks-section {
+    padding: 12px;
+  }
+}
+
+/* Integration with ChatGPT's existing styles */
+.chatgpt-bookmark-search-container,
+.chatgpt-bookmarks-section {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Hide elements when ChatGPT is loading */
+.chatgpt-loading .chatgpt-bookmark-search-container,
+.chatgpt-loading .chatgpt-bookmarks-section {
+  display: none;
+}
+
+/* Ensure proper positioning in sidebar */
+nav[aria-label="Chat history"] .chatgpt-bookmark-search-container {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Match ChatGPT's dark theme variables */
+:root {
+  --chatgpt-bookmark-bg: #171717;
+  --chatgpt-bookmark-surface: #2a2a2a;
+  --chatgpt-bookmark-border: #4a4a4a;
+  --chatgpt-bookmark-text: #ececec;
+  --chatgpt-bookmark-text-muted: #8e8e8e;
+  --chatgpt-bookmark-text-subtle: #6a6a6a;
+  --chatgpt-bookmark-accent: #ffd700;
+}
+
+/* Floating Search Popup - ChatGPT Style */
+.chatgpt-bookmark-floating-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+}
+
+.chatgpt-bookmark-floating-backdrop.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.chatgpt-bookmark-floating-popup {
+  min-height: 300px !important;
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  width: 448px;
+  max-width: 90vw;
+  background: #212121;
+  border: 1px solid #424242;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-20px) scale(0.95);
+  padding: 0 0 20px 0 !important;
+  transition: all 0.15s ease;
+  font-family: "Söhne", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.chatgpt-bookmark-floating-popup.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.chatgpt-bookmark-floating-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px 20px;
+  border-bottom: 1px solid #424242;
+  border-radius: 12px 12px 0 0;
+  cursor: grab;
+  user-select: none;
+  background: #212121;
+}
+
+.chatgpt-bookmark-floating-header:active {
+  cursor: grabbing;
+}
+
+.chatgpt-bookmark-floating-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: #ececec;
+  letter-spacing: -0.01em;
+}
+
+.chatgpt-bookmark-floating-close {
+  background: none;
+  border: none;
+  color: #8e8ea0;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.chatgpt-bookmark-floating-close:hover {
+  background: #343541;
+  color: #ececec;
+}
+
+.chatgpt-bookmark-floating-content {
+  padding: 20px;
+}
+
+.chatgpt-bookmark-floating-search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #40414f;
+  border: 1px solid #565869;
+  border-radius: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.chatgpt-bookmark-floating-search-input-container:focus-within {
+  border-color: #565869;
+}
+
+.chatgpt-bookmark-floating-search-icon {
+  padding: 12px 0 12px 16px;
+  color: #8e8ea0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.chatgpt-bookmark-floating-search-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 12px 16px 12px 8px;
+  font-size: 14px;
+  color: #ececec;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.4;
+  box-shadow: none;
+}
+
+.chatgpt-bookmark-floating-search-input::placeholder {
+  color: #8e8ea0;
+}
+
+.chatgpt-bookmark-floating-search-results {
+  margin-top: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid #424242;
+  background: #343541;
+  display: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.chatgpt-bookmark-floating-search-results.show {
+  display: block;
+}
+
+.chatgpt-bookmark-floating-search-result {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #424242;
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+.chatgpt-bookmark-floating-search-result:hover {
+  background: #40414f;
+}
+
+.chatgpt-bookmark-floating-search-result:last-child {
+  border-bottom: none;
+}
+
+.chatgpt-bookmark-floating-search-result-title {
+  font-weight: 500;
+  color: #ececec;
+  margin-bottom: 4px;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatgpt-bookmark-floating-search-result-preview {
+  color: #8e8ea0;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  opacity: 0.8;
+}
+
+.chatgpt-bookmark-floating-search-result-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #6f7180;
+}
+
+.chatgpt-bookmark-floating-search-result-timestamp {
+  color: #6f7180;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.chatgpt-bookmark-floating-search-result-count {
+  color: #6f7180;
+  font-size: 11px;
+  font-weight: 500;
+  background: #40414f;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Floating popup scrollbar */
+.chatgpt-bookmark-floating-search-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chatgpt-bookmark-floating-search-results::-webkit-scrollbar-track {
+  background: #343541;
+}
+
+.chatgpt-bookmark-floating-search-results::-webkit-scrollbar-thumb {
+  background: #565869;
+  border-radius: 3px;
+}
+
+.chatgpt-bookmark-floating-search-results::-webkit-scrollbar-thumb:hover {
+  background: #6f7180;
+}
+
+/* Additional ChatGPT-style enhancements */
+.chatgpt-bookmark-floating-search-result::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: #ececec;
+  transition: width 0.15s ease;
+}
+
+.chatgpt-bookmark-floating-search-result:hover::before {
+  width: 2px;
+}
+
+.chatgpt-bookmark-floating-search-result-title {
+  display: flex;
+  align-items: center;
+}
+
+/* Empty state styling */
+.chatgpt-bookmark-floating-search-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #8e8ea0;
+}
+
+.chatgpt-bookmark-floating-search-empty svg {
+  width: 32px;
+  height: 32px;
+  color: #565869;
+  margin-bottom: 12px;
+}
+
+.chatgpt-bookmark-floating-search-empty h3 {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #ececec;
+}
+
+.chatgpt-bookmark-floating-search-empty p {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Keyboard navigation hint */
+.chatgpt-bookmark-floating-search-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 10px;
+  color: #6f7180;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chatgpt-bookmark-floating-search-hint kbd {
+  background: #40414f;
+  color: #8e8ea0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: monospace;
+}
+
+/* Responsive adjustments for floating popup */
+@media (max-width: 768px) {
+  .chatgpt-bookmark-floating-popup {
+    width: 350px;
+    max-width: 95vw;
+  }
+  
+  .chatgpt-bookmark-floating-content {
+    padding: 16px;
+  }
+  
+  .chatgpt-bookmark-floating-header {
+    padding: 12px 16px;
+  }
+  
+  .chatgpt-bookmark-floating-search-results {
+    max-height: 280px;
+  }
+}
+
+/* Focus styles for accessibility */
+.chatgpt-bookmark-floating-search-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.chatgpt-bookmark-floating-search-result:focus-visible {
+  outline: 2px solid #565869;
+  outline-offset: -2px;
+}
+
+/* Animation for search results */
+.chatgpt-bookmark-floating-search-result {
+  animation: slideIn 0.15s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+} 
+
+/* Bookmark Menu Item Styles */
+.chatgpt-bookmark-menu-item {
+  position: relative;
+}
+
+.chatgpt-bookmark-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.chatgpt-bookmark-menu-badge {
+  transition: all 0.15s ease;
+}
+
+.chatgpt-bookmark-dropdown {
+  backdrop-filter: blur(10px);
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.chatgpt-bookmark-dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chatgpt-bookmark-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chatgpt-bookmark-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.chatgpt-bookmark-dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.chatgpt-bookmark-dropdown-item {
+  position: relative;
+}
+
+.chatgpt-bookmark-dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.chatgpt-bookmark-dropdown-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  /* background: #10a37f; */
+  transition: width 0.15s ease;
+  border-radius: 0 2px 2px 0;
+}
+
+.chatgpt-bookmark-dropdown-item:hover::before {
+  width: 2px;
+} 
+
+/* Subfolder section styles */
+.subfolder-section {
+  margin-bottom: 24px;
+  padding: 16px 12px 12px 12px;
+  background: #232323;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.subfolder-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffd700;
+  margin-bottom: 8px;
+  letter-spacing: 0.2px;
+}
+
+/* Optional: tweak .empty-state for subfolder context */
+.subfolder-section .empty-state {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  color: #8e8e8e;
+  text-align: left;
+} 

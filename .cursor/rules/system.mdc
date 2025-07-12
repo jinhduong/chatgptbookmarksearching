@@ -1,0 +1,12 @@
+---
+description: System rule
+globs:
+alwaysApply: true
+---
+
+1. Please help to implement tasks from todo list one by one
+2. Please confirm with the user before moving to implementation, waiting for answer such as: "yes", "go", "approve" or any words have the same meaning
+3. In case of needing implementation, please do not immediately do it, plan the todo list out first and askign for approval.
+4. You're not allowed to run any command that can modify the system bin/PATH, etc. You are only allowed to run command that verifying whether new code is runnable or buildable.
+5. Project out the change and warning users if it can reach the over than 10 requests, and asking them for approval
+6. Please change to cheaper model (o3, gemini pro 2.5) for answering questions.

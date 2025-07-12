@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Bookmarks</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #171717;
+            color: #ececec;
+            width: 450px;
+            min-height: 400px;
+            max-height: 600px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #1a1a1a;
+            padding: 16px;
+            border-bottom: 1px solid #2a2a2a;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo svg {
+            width: 18px;
+            height: 18px;
+            fill: #ffd700;
+        }
+
+        .bookmark-count {
+            font-size: 12px;
+            background: #2a2a2a;
+            color: #8e8e8e;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .search-container {
+            position: relative;
+            margin-top: 12px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #ececec;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: #5a5a5a;
+        }
+
+        .search-input::placeholder {
+            color: #8e8e8e;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 150px;
+            background: #1a1a1a;
+            border-right: 1px solid #2a2a2a;
+            padding: 16px 12px;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #8e8e8e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .add-folder-button {
+            width: 20px;
+            height: 20px;
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            color: #ffd700;
+            font-size: 16px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0;
+        }
+        
+        .add-folder-button:hover {
+            background: #3a3a3a;
+            border-color: #ffd700;
+        }
+
+        .default-folder-selector {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #2a2a2a;
+            border-radius: 4px;
+            border: 1px solid #4a4a4a;
+        }
+
+        .default-folder-label {
+            display: block;
+            font-size: 10px;
+            color: #8e8e8e;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .default-folder-select {
+            width: 100%;
+            background: #1a1a1a;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-size: 11px;
+            color: #ececec;
+            outline: none;
+        }
+
+        .default-folder-select:focus {
+            border-color: #ffd700;
+        }
+
+        .folder-tree {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .folder-item {
+            margin-bottom: 2px;
+        }
+
+        .folder-link {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            color: #8e8e8e;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .folder-link:hover {
+            background: #2a2a2a;
+            color: #ececec;
+        }
+
+        .folder-link.active {
+            background: #ffd700;
+            color: #171717;
+            font-weight: 500;
+        }
+
+        .folder-icon {
+            width: 12px;
+            height: 12px;
+            margin-right: 6px;
+            fill: currentColor;
+        }
+
+        .folder-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .folder-count {
+            font-size: 10px;
+            background: #2a2a2a;
+            color: #8e8e8e;
+            padding: 1px 4px;
+            border-radius: 8px;
+            margin-left: 4px;
+        }
+
+        .folder-link.active .folder-count {
+            background: rgba(23, 23, 23, 0.3);
+            color: #171717;
+        }
+
+        .context-menu {
+            position: absolute;
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            padding: 4px 0;
+            min-width: 120px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .context-menu.show {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #ececec;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .context-menu-item:hover {
+            background: #3a3a3a;
+        }
+
+        .context-menu-item.danger {
+            color: #ff6b6b;
+        }
+
+        .context-menu-item.danger:hover {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .context-menu-separator {
+            height: 1px;
+            background: #4a4a4a;
+            margin: 4px 0;
+        }
+
+        .new-folder-form {
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .new-folder-form.show {
+            display: block;
+        }
+
+        .new-folder-input {
+            width: 100%;
+            background: #1a1a1a;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 12px;
+            color: #ececec;
+            margin-bottom: 8px;
+        }
+
+        .new-folder-input:focus {
+            outline: none;
+            border-color: #ffd700;
+        }
+
+        .new-folder-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .new-folder-button {
+            background: #ffd700;
+            color: #171717;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .new-folder-button:hover {
+            background: #ffed4a;
+        }
+
+        .new-folder-button.cancel {
+            background: #4a4a4a;
+            color: #ececec;
+        }
+
+        .new-folder-button.cancel:hover {
+            background: #5a5a5a;
+        }
+
+        .folder-link.drag-over {
+            background: #ffd700;
+            color: #171717;
+        }
+
+        .bookmark-item.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+        }
+
+        .bookmark-item {
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .drop-indicator {
+            height: 2px;
+            background: #ffd700;
+            margin: 2px 0;
+            border-radius: 1px;
+            display: none;
+        }
+
+        .drop-indicator.show {
+            display: block;
+        }
+
+        .content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .bookmarks-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .bookmark-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .bookmark-item:hover {
+            background: #3a3a3a;
+            border-color: #4a4a4a;
+        }
+
+        .bookmark-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bookmark-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ececec;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bookmark-preview {
+            font-size: 12px;
+            color: #8e8e8e;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            margin-bottom: 4px;
+        }
+
+        .bookmark-timestamp {
+            font-size: 11px;
+            color: #6a6a6a;
+        }
+
+        .bookmark-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .bookmark-action {
+            background: none;
+            border: none;
+            color: #8e8e8e;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+
+        .bookmark-action:hover {
+            background: #4a4a4a;
+            color: #ececec;
+        }
+
+        .bookmark-action.delete {
+            color: #ff6b6b;
+        }
+
+        .bookmark-action.delete:hover {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8e8e8e;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            fill: #4a4a4a;
+            margin-bottom: 12px;
+        }
+
+        .empty-state h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8e8e8e;
+        }
+
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #2a2a2a;
+            border-top: 2px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #2a2a2a;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: #8e8e8e;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .filter-button {
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            color: #8e8e8e;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .filter-button:hover {
+            background: #3a3a3a;
+            border-color: #5a5a5a;
+        }
+
+        .filter-button.active {
+            background: #ffd700;
+            color: #171717;
+            border-color: #ffd700;
+        }
+
+        .footer {
+            background: #1a1a1a;
+            padding: 12px 16px;
+            border-top: 1px solid #2a2a2a;
+            position: sticky;
+            bottom: 0;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #8e8e8e;
+            text-decoration: none;
+            font-size: 11px;
+        }
+
+        .footer a:hover {
+            color: #ececec;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">
+            <div class="logo">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span>ChatGPT Bookmarks</span>
+            </div>
+            <div class="bookmark-count" id="bookmarkCount">0</div>
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search bookmarks...">
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Folders</div>
+                <button class="add-folder-button" id="addFolderButton" title="Add new folder">+</button>
+            </div>
+            <div class="default-folder-selector" id="defaultFolderSelector">
+                <label for="defaultFolderSelect" class="default-folder-label">Default folder:</label>
+                <select class="default-folder-select" id="defaultFolderSelect">
+                    <option value="default">Uncategorized</option>
+                </select>
+            </div>
+            <div class="new-folder-form" id="newFolderForm">
+                <input type="text" class="new-folder-input" id="newFolderInput" placeholder="Folder name...">
+                <div class="new-folder-buttons">
+                    <button class="new-folder-button" id="createFolderBtn">Create</button>
+                    <button class="new-folder-button cancel" id="cancelFolderBtn">Cancel</button>
+                </div>
+            </div>
+            <ul class="folder-tree" id="folderTree">
+                <li class="folder-item">
+                    <a class="folder-link active" data-folder-id="all">
+                        <svg class="folder-icon" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        <span class="folder-name">All Bookmarks</span>
+                        <span class="folder-count" id="allBookmarksCount">0</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <div class="stats" id="stats" style="display: none;">
+                <span>Total: <span id="totalCount">0</span></span>
+                <span>This week: <span id="weekCount">0</span></span>
+            </div>
+
+            <div class="filter-buttons" id="filterButtons" style="display: none;">
+                <button class="filter-button active" data-filter="all">All</button>
+                <button class="filter-button" data-filter="recent">Recent</button>
+                <button class="filter-button" data-filter="week">This Week</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <p>Loading bookmarks...</p>
+            </div>
+
+            <div class="bookmarks-list" id="bookmarksList"></div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <h3>No bookmarks yet</h3>
+                <p>Start bookmarking your favorite ChatGPT conversations by clicking the star icon in the sidebar.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <a href="https://github.com" target="_blank">ChatGPT Bookmark Extension</a>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" data-action="new-folder">New Folder</div>
+        <div class="context-menu-item" data-action="rename-folder">Rename</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item danger" data-action="delete-folder">Delete</div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html> 
