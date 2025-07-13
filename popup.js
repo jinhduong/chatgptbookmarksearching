@@ -19,6 +19,7 @@ let createFolderBtn = null;
 let cancelFolderBtn = null;
 let defaultFolderSelect = null;
 let addFolderButton = null;
+let toggleSidebarBtn = null;
 
 // State
 let allBookmarks = [];
@@ -28,6 +29,7 @@ let currentFilter = 'all';
 let currentFolderId = 'all';
 let searchTimeout = null;
 let contextMenuTarget = null;
+let sidebarHidden = false;
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', initializePopup);
@@ -53,6 +55,7 @@ async function initializePopup() {
     cancelFolderBtn = document.getElementById('cancelFolderBtn');
     defaultFolderSelect = document.getElementById('defaultFolderSelect');
     addFolderButton = document.getElementById('addFolderButton');
+    toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
 
     // Setup event listeners
     setupEventListeners();
@@ -63,6 +66,9 @@ async function initializePopup() {
     
     // Check indexing status
     checkIndexingStatus();
+
+    // Load sidebar state
+    loadSidebarState();
 
   } catch (error) {
     console.error('Failed to initialize popup:', error);
@@ -113,14 +119,41 @@ function setupEventListeners() {
   // Add folder button
   if (addFolderButton) {
     console.log('Setting up addFolderButton click handler');
-    addFolderButton.addEventListener('click', (e) => {
+    addFolderButton.addEventListener('click', async (e) => {
       console.log('Add folder button clicked');
       e.preventDefault();
       e.stopPropagation();
-      showNewFolderForm();
+      
+      // Check if user can create more folders
+      try {
+        const [isPremiumResponse, folderCountResponse] = await Promise.all([
+          sendMessageToBackground('getUserPremiumStatus'),
+          sendMessageToBackground('getFolderCount')
+        ]);
+        
+        if (isPremiumResponse.success && folderCountResponse.success) {
+          const isPremium = isPremiumResponse.data;
+          const folderCount = folderCountResponse.data;
+          
+          if (!isPremium && folderCount >= 3) {
+            showUpgradePrompt('You\'ve reached the maximum of 3 folders. Upgrade to premium for unlimited folders.');
+            return;
+          }
+        }
+        
+        showNewFolderForm();
+      } catch (error) {
+        console.error('Failed to check folder limit:', error);
+        showNewFolderForm(); // Show form anyway if check fails
+      }
     });
   } else {
     console.error('addFolderButton not found');
+  }
+
+  // Toggle sidebar button
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.addEventListener('click', toggleSidebar);
   }
 
   // Close context menu and forms when clicking outside
@@ -151,6 +184,7 @@ async function loadFolders() {
     if (response.success) {
       allFolders = response.data || [];
       buildFolderTree();
+      updateFolderUsageDisplay(); // Update usage display after loading folders
     } else {
       throw new Error(response.error || 'Failed to load folders');
     }
@@ -383,7 +417,31 @@ function handleFolderContextMenu(e) {
   // Don't show context menu for "All Bookmarks"
   if (folderId === 'all') {
     console.log('All Bookmarks clicked, showing new folder form');
-    showNewFolderForm();
+    
+    // Check if user can create more folders
+    (async () => {
+      try {
+        const [isPremiumResponse, folderCountResponse] = await Promise.all([
+          sendMessageToBackground('getUserPremiumStatus'),
+          sendMessageToBackground('getFolderCount')
+        ]);
+        
+        if (isPremiumResponse.success && folderCountResponse.success) {
+          const isPremium = isPremiumResponse.data;
+          const folderCount = folderCountResponse.data;
+          
+          if (!isPremium && folderCount >= 3) {
+            showUpgradePrompt('You\'ve reached the maximum of 3 folders. Upgrade to premium for unlimited folders.');
+            return;
+          }
+        }
+        
+        showNewFolderForm();
+      } catch (error) {
+        console.error('Failed to check folder limit:', error);
+        showNewFolderForm(); // Show form anyway if check fails
+      }
+    })();
     return;
   }
   
@@ -451,7 +509,31 @@ function handleContextMenuClick(e) {
     case 'new-folder':
       console.log('Creating new folder');
       hideContextMenu();
-      showNewFolderForm();
+      
+      // Check if user can create more folders
+      (async () => {
+        try {
+          const [isPremiumResponse, folderCountResponse] = await Promise.all([
+            sendMessageToBackground('getUserPremiumStatus'),
+            sendMessageToBackground('getFolderCount')
+          ]);
+          
+          if (isPremiumResponse.success && folderCountResponse.success) {
+            const isPremium = isPremiumResponse.data;
+            const folderCount = folderCountResponse.data;
+            
+            if (!isPremium && folderCount >= 3) {
+              showUpgradePrompt('You\'ve reached the maximum of 3 folders. Upgrade to premium for unlimited folders.');
+              return;
+            }
+          }
+          
+          showNewFolderForm();
+        } catch (error) {
+          console.error('Failed to check folder limit:', error);
+          showNewFolderForm(); // Show form anyway if check fails
+        }
+      })();
       break;
     case 'rename-folder':
       console.log('Renaming folder');
@@ -516,8 +598,14 @@ async function handleCreateFolder() {
       await loadFolders();
       hideNewFolderForm();
       showSuccess('Folder created successfully');
+      updateFolderUsageDisplay(); // Update usage display after creating folder
     } else {
-      throw new Error(response.error || 'Failed to create folder');
+      if (response.errorType === 'FOLDER_LIMIT_REACHED') {
+        hideNewFolderForm();
+        showUpgradePrompt(response.error);
+      } else {
+        throw new Error(response.error || 'Failed to create folder');
+      }
     }
   } catch (error) {
     console.error('Failed to create folder:', error);
@@ -1190,8 +1278,201 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         loadBookmarks();
         break;
+      case 'b':
+        e.preventDefault();
+        toggleSidebar();
+        break;
     }
   }
 });
 
-console.log('ChatGPT Bookmark Extension popup loaded'); 
+// Show upgrade prompt for premium features
+function showUpgradePrompt(message) {
+  // Create upgrade prompt modal
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 300px;
+    text-align: center;
+  `;
+  
+  content.innerHTML = `
+    <div style="color: #ffd700; font-size: 32px; margin-bottom: 16px;">⭐</div>
+    <h3 style="color: #ececec; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Upgrade to Premium</h3>
+    <p style="color: #999; font-size: 14px; line-height: 1.4; margin-bottom: 20px;">${message}</p>
+    <div style="display: flex; gap: 8px;">
+      <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
+              style="flex: 1; background: #4a4a4a; color: #ececec; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">
+        Maybe Later
+      </button>
+      <button onclick="window.open('https://your-upgrade-url.com', '_blank'); this.closest('div[style*=\"position: fixed\"]').remove()" 
+              style="flex: 1; background: #ffd700; color: #171717; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;">
+        Upgrade Now
+      </button>
+    </div>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  // Remove modal when clicking outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+// Update folder usage display
+async function updateFolderUsageDisplay() {
+  try {
+    const [isPremiumResponse, folderCountResponse] = await Promise.all([
+      sendMessageToBackground('getUserPremiumStatus'),
+      sendMessageToBackground('getFolderCount')
+    ]);
+    
+    if (isPremiumResponse.success && folderCountResponse.success) {
+      const isPremium = isPremiumResponse.data;
+      const folderCount = folderCountResponse.data;
+      
+      // Find or create usage display element
+      let usageDisplay = document.getElementById('folderUsageDisplay');
+      if (!usageDisplay) {
+        usageDisplay = document.createElement('div');
+        usageDisplay.id = 'folderUsageDisplay';
+        usageDisplay.style.cssText = `
+          padding: 8px 12px;
+          background: #2a2a2a;
+          border-radius: 4px;
+          margin-bottom: 8px;
+          font-size: 11px;
+          color: #8e8e8e;
+          text-align: center;
+        `;
+        
+        // Insert before folder tree
+        const folderTree = document.getElementById('folderTree');
+        if (folderTree && folderTree.parentNode) {
+          folderTree.parentNode.insertBefore(usageDisplay, folderTree);
+        }
+      }
+      
+      if (isPremium) {
+        usageDisplay.textContent = `${folderCount} folders • Premium`;
+        usageDisplay.style.color = '#ffd700';
+      } else {
+        usageDisplay.textContent = `${folderCount}/3 folders used`;
+        usageDisplay.style.color = folderCount >= 3 ? '#ff6b6b' : '#8e8e8e';
+      }
+      
+      // Update add folder button state
+      const addFolderButton = document.getElementById('addFolderButton');
+      if (addFolderButton) {
+        const isLimitReached = !isPremium && folderCount >= 3;
+        addFolderButton.disabled = isLimitReached;
+        addFolderButton.style.opacity = isLimitReached ? '0.5' : '1';
+        addFolderButton.style.cursor = isLimitReached ? 'not-allowed' : 'pointer';
+        addFolderButton.title = isLimitReached ? 'Upgrade to premium for unlimited folders' : 'Add new folder';
+      }
+    }
+  } catch (error) {
+    console.error('Failed to update folder usage display:', error);
+  }
+}
+
+// Toggle sidebar visibility
+function toggleSidebar() {
+  sidebarHidden = !sidebarHidden;
+  
+  const sidebar = document.querySelector('.sidebar');
+  const mainContainer = document.querySelector('.main-container');
+  
+  if (sidebarHidden) {
+    sidebar.classList.add('hidden');
+    mainContainer.classList.add('sidebar-hidden');
+    toggleSidebarBtn.title = 'Show folder list (Ctrl+B)';
+    // Change icon to show folder icon
+    toggleSidebarBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/></svg>';
+  } else {
+    sidebar.classList.remove('hidden');
+    mainContainer.classList.remove('sidebar-hidden');
+    toggleSidebarBtn.title = 'Hide folder list (Ctrl+B)';
+    // Change icon back to hamburger menu
+    toggleSidebarBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>';
+  }
+  
+  // Save state
+  saveSidebarState();
+}
+
+// Load sidebar state from storage
+async function loadSidebarState() {
+  try {
+    const response = await sendMessageToBackground('getMeta', { key: 'sidebarHidden' });
+    if (response.success && response.data) {
+      sidebarHidden = response.data;
+      
+      // Apply the state immediately
+      const sidebar = document.querySelector('.sidebar');
+      const mainContainer = document.querySelector('.main-container');
+      
+      if (sidebarHidden) {
+        sidebar.classList.add('hidden');
+        mainContainer.classList.add('sidebar-hidden');
+        toggleSidebarBtn.title = 'Show folder list (Ctrl+B)';
+        toggleSidebarBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/></svg>';
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load sidebar state:', error);
+  }
+}
+
+// Save sidebar state to storage
+async function saveSidebarState() {
+  try {
+    await sendMessageToBackground('saveMeta', { 
+      key: 'sidebarHidden', 
+      value: sidebarHidden 
+    });
+  } catch (error) {
+    console.error('Failed to save sidebar state:', error);
+  }
+}
+
+console.log('ChatGPT Bookmark Extension popup loaded');
+
+// Test function for sidebar toggle feature (can be called from console)
+window.testSidebarToggle = function() {
+  console.log('Testing sidebar toggle...');
+  console.log('Current sidebar state:', sidebarHidden);
+  console.log('Toggle button found:', !!toggleSidebarBtn);
+  console.log('Sidebar element found:', !!document.querySelector('.sidebar'));
+  console.log('Main container found:', !!document.querySelector('.main-container'));
+  
+  // Test the toggle
+  toggleSidebar();
+  
+  setTimeout(() => {
+    console.log('After toggle - sidebar state:', sidebarHidden);
+    console.log('Sidebar has hidden class:', document.querySelector('.sidebar').classList.contains('hidden'));
+    console.log('Main container has sidebar-hidden class:', document.querySelector('.main-container').classList.contains('sidebar-hidden'));
+  }, 100);
+}; 

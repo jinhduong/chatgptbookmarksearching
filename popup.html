@@ -41,6 +41,40 @@
             justify-content: space-between;
         }
 
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-sidebar-btn {
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+            color: #8e8e8e;
+            padding: 4px 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+        }
+
+        .toggle-sidebar-btn:hover {
+            background: #3a3a3a;
+            border-color: #5a5a5a;
+            color: #ececec;
+        }
+
+        .toggle-sidebar-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
         .logo {
             display: flex;
             align-items: center;
@@ -100,6 +134,19 @@
             border-right: 1px solid #2a2a2a;
             padding: 16px 12px;
             overflow-y: auto;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .main-container.sidebar-hidden .sidebar {
+            width: 0;
+            padding: 0;
+            border-right: none;
         }
 
         .sidebar-header {
@@ -363,6 +410,11 @@
             flex: 1;
             padding: 16px;
             overflow-y: auto;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-container.sidebar-hidden .content {
+            margin-left: 0;
         }
 
         .bookmarks-list {
@@ -635,7 +687,14 @@
                 </svg>
                 <span>ChatGPT Bookmarks</span>
             </div>
-            <div class="bookmark-count" id="bookmarkCount">0</div>
+            <div class="header-controls">
+                <button class="toggle-sidebar-btn" id="toggleSidebarBtn" title="Toggle folder list (Ctrl+B)">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                </button>
+                <div class="bookmark-count" id="bookmarkCount">0</div>
+            </div>
         </div>
         <div class="search-container">
             <input type="text" class="search-input" id="searchInput" placeholder="Search bookmarks...">

@@ -533,7 +533,33 @@ async function moveBookmark(bookmarkId, newFolderId) {
   }
 }
 
+// Check if user has premium status
+async function getUserPremiumStatus() {
+  const premiumStatus = await getMeta('isPremium');
+  return premiumStatus === true; // Default to false for non-premium
+}
+
+// Count non-default folders (excludes 'default'/'Uncategorized' folder)
+async function getFolderCount() {
+  const folders = await getAllFolders();
+  // Exclude the default folder from count
+  return folders.filter(folder => folder.id !== 'default').length;
+}
+
 async function createFolder(name, parentId = null) {
+  // Check if user is premium
+  const isPremium = await getUserPremiumStatus();
+  
+  if (!isPremium) {
+    // Check folder limit for non-premium users
+    const currentFolderCount = await getFolderCount();
+    const FOLDER_LIMIT = 3;
+    
+    if (currentFolderCount >= FOLDER_LIMIT) {
+      throw new Error(`FOLDER_LIMIT_REACHED:You've reached the maximum of ${FOLDER_LIMIT} folders. Upgrade to premium for unlimited folders.`);
+    }
+  }
+  
   const folder = {
     id: generateFolderId(name, parentId),
     name,
@@ -809,8 +835,20 @@ async function handleMessage(request, sender, sendResponse) {
         break;
         
       case 'createFolder':
-        const newFolder = await createFolder(request.name, request.parentId);
-        sendResponse({ success: true, data: newFolder });
+        try {
+          const newFolder = await createFolder(request.name, request.parentId);
+          sendResponse({ success: true, data: newFolder });
+        } catch (error) {
+          if (error.message.startsWith('FOLDER_LIMIT_REACHED:')) {
+            sendResponse({ 
+              success: false, 
+              error: error.message.replace('FOLDER_LIMIT_REACHED:', ''),
+              errorType: 'FOLDER_LIMIT_REACHED'
+            });
+          } else {
+            sendResponse({ success: false, error: error.message });
+          }
+        }
         break;
         
       case 'getFoldersByParent':
@@ -826,6 +864,16 @@ async function handleMessage(request, sender, sendResponse) {
       case 'moveBookmark':
         await moveBookmark(request.bookmarkId, request.newFolderId);
         sendResponse({ success: true });
+        break;
+        
+      case 'getUserPremiumStatus':
+        const isPremium = await getUserPremiumStatus();
+        sendResponse({ success: true, data: isPremium });
+        break;
+        
+      case 'getFolderCount':
+        const folderCount = await getFolderCount();
+        sendResponse({ success: true, data: folderCount });
         break;
         
       default:

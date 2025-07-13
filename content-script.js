@@ -58,6 +58,7 @@ function initializeExtension() {
     // Create UI elements
     // createSearchBar();
     createBookmarkMenuItem();
+    createBookmarkFoldersInSidebar();
     // createBookmarksSection();
     createFloatingPopup();
     createIndexingIndicator();
@@ -410,10 +411,8 @@ async function populateBookmarkDropdown() {
       return;
     }
 
-    // Show bookmarks in default/uncategorized folder first
-    if (bookmarksByFolder['default'] && bookmarksByFolder['default'].length > 0) {
-      createFolderSection('Uncategorized', bookmarksByFolder['default']);
-    }
+    // Note: Default folder is handled by the regular folder loop below
+    // No need to create a separate "Uncategorized" section here
 
     // Show each root folder and its subfolders
     rootFolders.forEach(folder => {
@@ -550,6 +549,323 @@ function updateBookmarkMenuBadge(count) {
     badge.textContent = count.toString();
     badge.style.display = count > 0 ? 'block' : 'none';
   }
+}
+
+// Create bookmark folders in ChatGPT's native sidebar
+async function createBookmarkFoldersInSidebar() {
+  // Skip if already exists
+  if (document.querySelector(`.${EXTENSION_PREFIX}-folders-section`)) return;
+  
+  // Find the sidebar section where projects are displayed
+  const projectsSection = document.querySelector('aside[id*="snorlax"]') || 
+                         document.querySelector('aside.pt-\\(--sidebar-section-margin-top\\)') ||
+                         document.querySelector('nav[aria-label="Chat history"]')?.closest('aside');
+  
+  if (!projectsSection) {
+    console.log('Projects section not found, retrying...');
+    setTimeout(createBookmarkFoldersInSidebar, 2000);
+    return;
+  }
+  
+  try {
+    // Fetch bookmark folders
+    const foldersResponse = await sendMessageToBackground('getAllFolders');
+    const bookmarksResponse = await sendMessageToBackground('getAllBookmarks');
+    
+    if (!foldersResponse.success || !bookmarksResponse.success) {
+      console.error('Failed to load folders or bookmarks');
+      return;
+    }
+    
+    const folders = foldersResponse.data || [];
+    const bookmarks = bookmarksResponse.data || [];
+    
+    // Group bookmarks by folder
+    const bookmarksByFolder = {};
+    folders.forEach(folder => {
+      bookmarksByFolder[folder.id] = [];
+    });
+    
+    bookmarks.forEach(bookmark => {
+      const folderId = bookmark.folderId || 'default';
+      if (!bookmarksByFolder[folderId]) {
+        bookmarksByFolder[folderId] = [];
+      }
+      bookmarksByFolder[folderId].push(bookmark);
+    });
+    
+    // Create the bookmark folders section
+    const bookmarkSection = document.createElement('aside');
+    bookmarkSection.className = `pt-(--sidebar-section-margin-top) last:mb-5 ${EXTENSION_PREFIX}-folders-section`;
+    bookmarkSection.id = 'bookmark-folders-section';
+    
+    // Add section header
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'group __menu-item hoverable gap-1.5';
+    headerDiv.tabIndex = 0;
+    headerDiv.setAttribute('data-fill', '');
+    
+    headerDiv.innerHTML = `
+      <div class="flex items-center justify-center group-disabled:opacity-50 group-data-disabled:opacity-50 icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="icon" aria-hidden="true">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      </div>
+      Bookmark Folders
+    `;
+    
+    bookmarkSection.appendChild(headerDiv);
+    
+    // Add folder items (excluding default folder or show it as "Uncategorized")
+    const visibleFolders = folders.filter(folder => {
+      const folderBookmarks = bookmarksByFolder[folder.id] || [];
+      return folderBookmarks.length > 0; // Only show folders with bookmarks
+    });
+    
+    visibleFolders.forEach(folder => {
+      const folderBookmarks = bookmarksByFolder[folder.id] || [];
+      
+      // Create folder item matching ChatGPT's style
+      const folderItem = document.createElement('a');
+      folderItem.className = 'group __menu-item hoverable';
+      folderItem.tabIndex = 0;
+      folderItem.setAttribute('data-fill', '');
+      folderItem.style.cursor = 'pointer';
+      
+      // Use folder name, but show "Uncategorized" for default folder
+      const displayName = folder.id === 'default' ? 'Uncategorized' : folder.name;
+      
+      folderItem.innerHTML = `
+        <div class="flex min-w-0 items-center gap-1.5">
+          <div class="flex items-center justify-center group-disabled:opacity-50 group-data-disabled:opacity-50 icon">
+            <button class="icon" data-state="closed">
+              <div class="[&_path]:stroke-current text-token-text-primary" style="width: 20px; height: 20px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20">
+                  <path stroke-linecap="round" stroke-linejoin="miter" fill-opacity="0" stroke-miterlimit="4" stroke="rgb(156, 163, 175)" stroke-opacity="1" stroke-width="1.33" d="M3 4.5A1.5 1.5 0 0 1 4.5 3h3.379a1 1 0 0 1 .707.293L10 4.707A1 1 0 0 0 10.707 5H15.5A1.5 1.5 0 0 1 17 6.5v7A1.5 1.5 0 0 1 15.5 15h-11A1.5 1.5 0 0 1 3 13.5V4.5Z"/>
+                </svg>
+              </div>
+            </button>
+          </div>
+          <div class="flex min-w-0 grow items-center gap-2.5">
+            <div class="truncate">${displayName}</div>
+          </div>
+        </div>
+        <div class="text-token-text-tertiary flex items-center self-stretch">
+          <span class="text-xs">${folderBookmarks.length}</span>
+        </div>
+      `;
+      
+      // Add click handler to show folder bookmarks
+      folderItem.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showFolderBookmarks(folder, folderBookmarks, folderItem);
+      });
+      
+      bookmarkSection.appendChild(folderItem);
+    });
+    
+    // Insert the bookmark section after the projects section or at the beginning
+    if (projectsSection.nextSibling) {
+      projectsSection.parentNode.insertBefore(bookmarkSection, projectsSection.nextSibling);
+    } else {
+      projectsSection.parentNode.appendChild(bookmarkSection);
+    }
+    
+    console.log('Bookmark folders section created successfully');
+    
+  } catch (error) {
+    console.error('Failed to create bookmark folders section:', error);
+  }
+}
+
+// Show bookmarks for a specific folder in an inline dropdown
+function showFolderBookmarks(folder, bookmarks, folderElement) {
+  console.log(`Showing ${bookmarks.length} bookmarks for folder: ${folder.name}`);
+  
+  // Remove any existing folder dropdown
+  const existingDropdown = document.querySelector(`.${EXTENSION_PREFIX}-folder-dropdown`);
+  if (existingDropdown) {
+    existingDropdown.remove();
+  }
+  
+  // Create overlay dropdown that doesn't affect layout
+  const folderDropdown = document.createElement('div');
+  folderDropdown.className = `${EXTENSION_PREFIX}-folder-dropdown`;
+  
+  // Get folder element position for positioning
+  const folderRect = folderElement.getBoundingClientRect();
+  
+  // Position dropdown to the right of the folder item
+  const dropdownWidth = 280; // Fixed width for better UX
+  const rightPosition = folderRect.right + 8; // 8px gap from the folder
+  const availableSpace = window.innerWidth - rightPosition;
+  
+  // If not enough space on the right, position it to the left
+  const shouldPositionLeft = availableSpace < dropdownWidth;
+  const leftPosition = shouldPositionLeft ? folderRect.left - dropdownWidth - 8 : rightPosition;
+  
+  folderDropdown.style.cssText = `
+    position: fixed;
+    top: ${folderRect.top}px;
+    left: ${leftPosition}px;
+    width: ${dropdownWidth}px;
+    background: #1f1f1f;
+    border: 1px solid #333;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(16px);
+    max-height: 400px;
+    overflow-y: auto;
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    transition: all 0.2s ease;
+    z-index: 10000;
+  `;
+  
+  // Add bookmarks directly to dropdown (matching existing bookmark dropdown structure)
+  if (bookmarks.length === 0) {
+    const emptyState = document.createElement('div');
+    emptyState.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      gap: 8px;
+    `;
+    emptyState.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="opacity: 0.5;">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+      <span>No bookmarks in this folder</span>
+    `;
+    folderDropdown.appendChild(emptyState);
+  } else {
+    bookmarks.forEach(bookmark => {
+      const item = document.createElement('div');
+      item.className = `${EXTENSION_PREFIX}-dropdown-item`;
+      item.style.cssText = `
+        display: flex;
+        align-items: center;
+        padding: 6px 12px 6px 20px;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        border-radius: 6px;
+        margin: 1px 4px;
+        gap: 8px;
+      `;
+      
+      // Icon
+      const icon = document.createElement('div');
+      icon.style.cssText = `
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        color: rgba(255, 255, 255, 0.5);
+      `;
+      icon.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      `;
+      
+      // Title
+      const title = document.createElement('div');
+      title.style.cssText = `
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 400;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        line-height: 18px;
+      `;
+      title.textContent = bookmark.title;
+      title.title = bookmark.title; // Tooltip for long titles
+      
+      item.appendChild(icon);
+      item.appendChild(title);
+      
+      // Add hover effect
+      item.addEventListener('mouseenter', () => {
+        item.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+      });
+      
+      item.addEventListener('mouseleave', () => {
+        item.style.backgroundColor = 'transparent';
+      });
+      
+      // Add click handler
+      item.addEventListener('click', () => {
+        if (bookmark.url) {
+          window.location.href = bookmark.url;
+        }
+        hideFolderDropdown();
+      });
+      
+      folderDropdown.appendChild(item);
+    });
+  }
+  
+  // Add dropdown to body as overlay
+  document.body.appendChild(folderDropdown);
+  
+  // Animate in (matching existing bookmark dropdown animation)
+  setTimeout(() => {
+    folderDropdown.style.opacity = '1';
+    folderDropdown.style.transform = 'translateY(0) scale(1)';
+  }, 10);
+  
+  // Store reference for cleanup
+  window.currentFolderDropdown = folderDropdown;
+  
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', hideFolderDropdownOnOutsideClick);
+  }, 100);
+}
+
+// Hide folder dropdown
+function hideFolderDropdown() {
+  const dropdown = document.querySelector(`.${EXTENSION_PREFIX}-folder-dropdown`);
+  if (dropdown) {
+    dropdown.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+    dropdown.style.opacity = '0';
+    dropdown.style.transform = 'translateY(-4px)';
+    
+    setTimeout(() => {
+      dropdown.remove();
+    }, 150);
+  }
+  
+  // Clean up event listener
+  document.removeEventListener('click', hideFolderDropdownOnOutsideClick);
+  window.currentFolderDropdown = null;
+}
+
+// Hide folder dropdown on outside click
+function hideFolderDropdownOnOutsideClick(e) {
+  const dropdown = document.querySelector(`.${EXTENSION_PREFIX}-folder-dropdown`);
+  const folderSection = document.querySelector(`.${EXTENSION_PREFIX}-folders-section`);
+  
+  if (dropdown && !dropdown.contains(e.target) && 
+      (!folderSection || !folderSection.contains(e.target))) {
+    hideFolderDropdown();
+  }
+}
+
+// Refresh bookmark folders section (call when bookmarks change)
+async function refreshBookmarkFoldersSection() {
+  const existingSection = document.querySelector(`.${EXTENSION_PREFIX}-folders-section`);
+  if (existingSection) {
+    existingSection.remove();
+  }
+  
+  // Recreate the section
+  await createBookmarkFoldersInSidebar();
 }
 
 // Create bookmarks section
@@ -1739,6 +2055,9 @@ async function toggleBookmark(chatId, chatItem) {
       
       // Refresh bookmarks UI
       loadBookmarks();
+      
+      // Refresh bookmark folders section
+      refreshBookmarkFoldersSection();
     }
   } catch (error) {
     console.error('Failed to toggle bookmark:', error);
@@ -1939,6 +2258,11 @@ function handleNavigation() {
       // Reinitialize UI elements if needed
       if (!document.querySelector(`.${EXTENSION_PREFIX}-menu-item`)) {
         createBookmarkMenuItem();
+      }
+      
+      // Reinitialize bookmark folders section if needed
+      if (!document.querySelector(`.${EXTENSION_PREFIX}-folders-section`)) {
+        createBookmarkFoldersInSidebar();
       }
       
       // Reinitialize polling for the new page
